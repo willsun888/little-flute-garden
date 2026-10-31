@@ -1,0 +1,11 @@
+# Local working files and earlier drafts
+backups/
+output/
+BUILD-STATE.json
+desktop-preview*.png
+.openai/
+.env
+.env.*
+node_modules/
+.DS_Store
+__layout.html

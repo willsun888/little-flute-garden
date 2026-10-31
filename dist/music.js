@@ -1,0 +1,56 @@
+/* Musical data checked against Yamaha's basic Boehm-system fingering chart. */
+window.NOTES={
+D4:{midi:62,y:150,position:"第一线下方",bits:"11111110",lesson:19},
+E4:{midi:64,y:140,position:"第一条线",bits:"11111101",lesson:18},
+F4:{midi:65,y:130,position:"第一个间",bits:"11111001",lesson:17},
+"F#4":{midi:66,y:130,position:"第一间 · 升F",bits:"11110011",lesson:41},
+G4:{midi:67,y:120,position:"第二条线",bits:"11110001",lesson:11},
+A4:{midi:69,y:110,position:"第二个间",bits:"11100001",lesson:10},
+Bb4:{midi:70,y:100,position:"第三线 · 降B",bits:"11001001",lesson:42},
+B4:{midi:71,y:100,position:"第三条线",bits:"11000001",lesson:9},
+C5:{midi:72,y:90,position:"第三个间",bits:"01000001",lesson:21},
+D5:{midi:74,y:80,position:"第四条线",bits:"10111110",lesson:22},
+E5:{midi:76,y:70,position:"第四个间",bits:"11111101",lesson:23}
+};
+window.noteLabel=n=>n===null?"休止":n.replace("#","♯").replace("b","♭").replace(/[45]$/,"");
+window.noteY=n=>NOTES[n]?.y;
+window.noteFrequency=n=>{if(!NOTES[n])throw new Error("Unsupported note: "+n);return 440*2**((NOTES[n].midi-69)/12)};
+const ink="#3e6250";
+function restGlyph(x,b,measureRest=false){if(measureRest||b===4)return '<rect x="'+(x-10)+'" y="80" width="21" height="8" fill="'+ink+'"/>';if(b===2)return '<rect x="'+(x-10)+'" y="92" width="21" height="8" fill="'+ink+'"/>';if(b===.5)return '<path d="M'+(x+8)+' 88l-10 34m9-33q-18 13-18 1" fill="none" stroke="'+ink+'" stroke-width="3"/><circle cx="'+(x-9)+'" cy="90" r="5" fill="'+ink+'"/>';return '<path d="m'+(x-4)+' 77 12 12-10 12 9 11q-19-8-14 11q-16-15 3-18l-8-9 11-12Z" fill="'+ink+'"/>'}
+function noteGlyph(e,x,{stemDir,stemEnd,flag=true,acc,labels=true,index,interactive=false}={}){if(e.n===null)return '<g class="score-event" data-event="'+index+'" aria-label="休止 '+e.b+' 拍">'+restGlyph(x,e.b,e.measureRest)+(labels?'<text class="note-name" x="'+x+'" y="185" text-anchor="middle" font-size="13" fill="#75866b">休止</text>':"")+'</g>';const n=e.n,y=noteY(n),hollow=e.b>=2,whole=e.b===4,dir=stemDir||(y<=100?"down":"up"),sx=x+(dir==="up"?8:-8),end=stemEnd??y+(dir==="up"?-42:42),sign=acc??(n.includes("#")?"♯":n.includes("b")?"♭":""),a=interactive?' tabindex="0" role="button" data-note="'+n+'" aria-label="听 '+n+'"':"";let g='<g class="staff-note score-event" data-event="'+index+'"'+a+'><rect class="hit-target" x="'+(x-24)+'" y="35" width="48" height="155" rx="12" fill="transparent"/>';if(sign)g+='<text x="'+(x-22)+'" y="'+(y+9)+'" text-anchor="middle" font-family="serif" font-size="29" fill="'+ink+'">'+sign+'</text>';g+='<ellipse cx="'+x+'" cy="'+y+'" rx="'+(whole?12:9)+'" ry="6.5" transform="rotate(-18 '+x+' '+y+')" fill="'+(hollow?"#fffdf6":ink)+'" stroke="'+ink+'" stroke-width="2.2"/>';if(!whole){g+='<line x1="'+sx+'" y1="'+y+'" x2="'+sx+'" y2="'+end+'" stroke="'+ink+'" stroke-width="2.4"/>';if(e.b===.5&&flag){const dy=dir==="up"?1:-1;g+='<path d="M'+sx+' '+end+'q25 '+(15*dy)+' 8 '+(30*dy)+'q8 '+(-15*dy)+'-8 '+(-18*dy)+'" fill="'+ink+'"/>'}}if(e.b===3)g+='<circle cx="'+(x+18)+'" cy="'+(y%20===0?y-10:y)+'" r="3" fill="'+ink+'"/>';if(labels)g+='<text class="note-name" x="'+x+'" y="185" text-anchor="middle" font-size="14" fill="#75866b">'+noteLabel(n)+'</text>';return g+'</g>'}
+function keyGlyph(key,x=70){return key==="G"?'<text x="'+x+'" y="68" font-size="27" fill="'+ink+'">♯</text>':key==="F"?'<text x="'+x+'" y="109" font-size="29" fill="'+ink+'">♭</text>':""}
+window.drawStaff=function(notes,{labels=true,interactive=false}={}){const chunks=[];for(let i=0;i<notes.length;i+=4)chunks.push(notes.slice(i,i+4));const accidentalState={};return chunks.map(chunk=>{const w=Math.max(350,120+chunk.length*75),step=(w-145)/Math.max(1,chunk.length-1);return svgWrap(staffLines(22,w-18)+treble(43,120)+chunk.map((n,i)=>noteGlyph(N(n),100+i*step,{labels,interactive,index:i,acc:eventAccidental(N(n),null,accidentalState)})).join(""),"高音谱表："+chunk.map(n=>n??"休止").join("、"),"0 0 "+w+" 210").replace('role="img"',interactive?'role="group"':'role="img"')}).join("")};
+window.drawFingering=function(n){const data=NOTES[n];if(!data)return "";let b='<text x="90" y="25" text-anchor="middle" font-size="17" fill="#5d7653">左手</text><text x="245" y="25" text-anchor="middle" font-size="17" fill="#5d7653">右手</text><rect x="111" y="42" width="38" height="187" rx="18" fill="#dce4d4"/><rect x="266" y="42" width="38" height="187" rx="18" fill="#dce4d4"/>';const circle=(x,y,on,label)=>'<circle cx="'+x+'" cy="'+y+'" r="14" fill="'+(on?"#466c50":"#fffdf7")+'" stroke="#72906a" stroke-width="2"/>'+(on?'<path d="m'+(x-6)+' '+y+' 4 4 8-9" fill="none" stroke="#fff8d9" stroke-width="2"/>':"")+'<text x="'+(x-23)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#687c60">'+label+'</text>';b+=circle(90,56,data.bits[0]==="1","拇指");["食指","中指","无名指"].forEach((l,i)=>{b+=circle(130,96+i*46,data.bits[i+1]==="1",l);b+=circle(285,56+i*46,data.bits[i+4]==="1",l)});b+=circle(285,197,data.bits[7]==="1","小指");b+='<circle cx="58" cy="259" r="7" fill="#466c50"/><text x="72" y="264" font-size="12" fill="#687c60">按下</text><circle cx="170" cy="259" r="7" fill="#fffdf7" stroke="#72906a"/><text x="184" y="264" font-size="12" fill="#687c60">不按</text><text x="173" y="287" text-anchor="middle" font-size="11" fill="#72816c">右拇指负责支撑 · 左小指放开</text>';return svgWrap(b,n+" 指法，按键位顺序 T L1 L2 L3 R1 R2 R3 右小指："+data.bits,"0 0 350 304")};
+function eventAccidental(e,key,state){if(!e.n)return '';const letter=e.n[0],octave=e.n.at(-1),slot=letter+octave,actual=e.n.includes('#')?'♯':e.n.includes('b')?'♭':'',initial=key==='G'&&letter==='F'?'♯':key==='F'&&letter==='B'?'♭':'',previous=state[slot]??initial;state[slot]=actual;return Object.hasOwn(e,'acc')?e.acc:actual!==previous?(actual||'♮'):''}
+window.drawScore=function(scoreOrId,{labels=true}={}){const sc=typeof scoreOrId==="string"?SCORES[scoreOrId]:scoreOrId;if(!sc)return "";let globalIndex=0;const flat=sc.bars.flat();const measures=sc.bars.map((bar,bi)=>{const startIndex=globalIndex,w=Math.max(355,154+bar.length*56),start=sc.key?128:116,end=w-(sc.repeat?62:45),spacing=(end-start)/Math.max(1,bar.length-1);const xs=bar.map((_,i)=>bar.length===1?(start+end)/2:start+i*spacing);let b=staffLines(20,w-18)+treble(40,120)+keyGlyph(sc.key,65)+'<text x="'+(sc.key?97:78)+'" y="92" text-anchor="middle" font-size="23" fill="'+ink+'">'+sc.meter+'</text><text x="'+(sc.key?97:78)+'" y="119" text-anchor="middle" font-size="23" fill="'+ink+'">4</text><line x1="'+(w-20)+'" y1="60" x2="'+(w-20)+'" y2="140" stroke="#6f8365" stroke-width="1.7"/>';const beams={},accidentalState={};let beat=0;for(let i=0;i<bar.length;i++){const e=bar[i],next=bar[i+1];if(e.n&&next?.n&&e.b===.5&&next.b===.5&&Math.abs(beat-Math.round(beat))<1e-6){const dir=(noteY(e.n)+noteY(next.n))/2<=100?"down":"up",y=dir==="up"?Math.min(noteY(e.n),noteY(next.n))-42:Math.max(noteY(e.n),noteY(next.n))+42;beams[i]={dir,y,first:true};beams[i+1]={dir,y};i++;beat+=1}else beat+=e.b}
+bar.forEach((e,i)=>{const beam=beams[i];b+=noteGlyph(e,xs[i],{stemDir:beam?.dir,stemEnd:beam?.y,flag:!beam,acc:eventAccidental(e,sc.key,accidentalState),labels,index:globalIndex++});if(beam?.first)b+='<path d="M'+(xs[i]+(beam.dir==="up"?8:-8))+' '+beam.y+'H'+(xs[i+1]+(beam.dir==="up"?8:-8))+'" stroke="'+ink+'" stroke-width="5"/>';if(e.tie){const to=i<bar.length-1?xs[i+1]:w-22,y=Math.max(noteY(e.n)+15,153);b+='<path d="M'+(xs[i]+3)+' '+y+'Q'+((xs[i]+to)/2)+' '+(y+16)+' '+(to-3)+' '+y+'" fill="none" stroke="'+ink+'" stroke-width="2"/>'}if(i===0&&startIndex>0&&flat[startIndex-1]?.tie){const y=Math.max(noteY(e.n)+15,153);b+='<path d="M94 '+y+'Q'+((94+xs[i])/2)+' '+(y+16)+' '+(xs[i]-3)+' '+y+'" fill="none" stroke="'+ink+'" stroke-width="2"/>'}});
+(sc.slurs||[]).filter(s=>s.bar===bi).forEach(s=>{const x1=xs[s.from],x2=xs[s.to],y=157;b+='<path d="M'+x1+' '+y+'Q'+((x1+x2)/2)+' 179 '+x2+' '+y+'" fill="none" stroke="'+ink+'" stroke-width="2"/>'});
+(sc.breaths||[]).filter(s=>s.bar===bi).forEach(s=>{b+='<text x="'+(xs[s.after]+15)+'" y="49" font-size="28" fill="#6c835c">,</text>'});
+if(sc.dynamic&&bi===0)b+='<text x="'+start+'" y="211" font-family="Georgia,serif" font-style="italic" font-size="20" fill="'+ink+'">'+sc.dynamic+'</text>';
+(sc.wedges||[]).filter(s=>s.bar===bi).forEach(s=>{const grow=s.type==="crescendo";b+='<path d="M'+start+' '+(grow?205:197)+'L'+end+' '+(grow?197:205)+'L'+start+' '+(grow?205:213)+'" fill="none" stroke="'+ink+'" stroke-width="1.8"/>'});
+if(sc.repeat&&bi===0)b+='<path d="M23 60v80M29 60v80" stroke="'+ink+'" stroke-width="2"/><circle cx="36" cy="90" r="2.6" fill="'+ink+'"/><circle cx="36" cy="110" r="2.6" fill="'+ink+'"/>';
+if(sc.repeat&&bi===sc.bars.length-1)b+='<path d="M'+(w-15)+' 60v80" stroke="'+ink+'" stroke-width="4"/><circle cx="'+(w-30)+'" cy="90" r="2.6" fill="'+ink+'"/><circle cx="'+(w-30)+'" cy="110" r="2.6" fill="'+ink+'"/>';
+return '<div class="score-measure"><span class="measure-label">第 '+(bi+1)+' 小节 · '+sc.meter+' 拍</span>'+svgWrap(b,bar.map(e=>(e.n||"休止")+" "+e.b+"拍").join("，"),"0 0 "+w+" 225")+'</div>'});return '<div class="score-grid">'+measures.join("")+'</div>'};
+window.compilePerformance=function(scoreOrId,{bpm,countIn=0,pulse=false}={}){const sc=typeof scoreOrId==="string"?SCORES[scoreOrId]:scoreOrId;const tempo=bpm||sc.bpm||64,spb=60/tempo,base=sc.bars.flat(),events=[];let beat=countIn;for(let rep=0;rep<(sc.repeat?2:1);rep++){const slurLinks=new Set();let offset=0;sc.bars.forEach((bar,bi)=>{(sc.slurs||[]).filter(s=>s.bar===bi).forEach(s=>{for(let j=s.from;j<s.to;j++)slurLinks.add(offset+j)});offset+=bar.length});let group=null;base.forEach((e,i)=>{const start=beat*spb,duration=e.b*spb,prev=base[i-1],join=i>0&&e.n&&prev.n&&(prev.tie||slurLinks.has(i-1));if(!e.n)group=null;else{if(!join||!group){group={start,parts:[],duration:0};events.push(group)}group.parts.push({n:e.n,offset:start-group.start,duration,volume:e.v??sc.volume??.13,index:i});group.duration=start+duration-group.start;group.gate=join ? .96 : .88;}beat+=e.b});}
+const highlights=[];let hbeat=countIn;for(let rep=0;rep<(sc.repeat?2:1);rep++)base.forEach((e,i)=>{highlights.push({index:i,start:hbeat*spb,duration:e.b*spb,rest:e.n===null});hbeat+=e.b});
+const ticks=[];for(let i=0;i<countIn;i++)ticks.push({start:i*spb,accent:i%sc.meter===0,count:i+1});if(pulse)for(let i=countIn;i<beat;i++)ticks.push({start:i*spb,accent:(i-countIn)%sc.meter===0});
+return{events,highlights,ticks,duration:beat*spb,totalBeats:beat,spb,countIn,meter:sc.meter}};
+window.lessonConcept=function(kind){const cards={
+quarter:[["♩","一个声音 · 一拍"],["休止","安静 · 一拍"]],
+half:[["𝅗𝅥","一个声音 · 两拍"],["1 + 1","拍子继续走"]],
+eighth:[["♫","两个小音 · 一拍"],["½ + ½","均匀分成两份"]],
+rests:[["全音符","持续四拍"],["二分休止","安静两拍"],["全休止","本例一小节四拍"]],
+meter4:[["4 / 4","每小节四拍"],["1 · 2 · 3 · 4","一组脚步"]],
+meter23:[["2 / 4","一二 · 一二"],["3 / 4","一二三 · 一二三"]],
+slur:[["G → A → B","不同音连贯"],["起音一次","手指继续换"]],
+tie:[["G ⌒ G","同音持续"],["1 + 1 = 2","后一个不重新起音"]],
+dotted:[["2 + 1 = 3","附点二分音符"],["多原来的一半","不是总加一拍"]],
+dynamics:[["p","弱"],["mf","中强"],["f","强"]],
+wedges:[["渐强","轻 → 响"],["渐弱","响 → 轻"]],
+tempo:[["50 拍/分","脚步慢一些"],["80 拍/分","脚步密一些"]],
+repeat:[["1 → 2","先走一遍"],["1 → 2","再走一遍"]],
+interval:[["G → A → B","走到隔壁"],["G → B","跨过 A"]],
+accidentals:[["♯","升半音"],["♭","降半音"],["♮","还原为自然音"]],
+keys:[["一个 ♯","各八度 F 默认升高"],["一个 ♭","各八度 B 默认降低"]]
+};if(!cards[kind])return "";return '<div class="concept-strip">'+cards[kind].map(([s,t])=>'<div><strong>'+s+'</strong><span>'+t+'</span></div>').join("")};
+
